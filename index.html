@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QRコードリーダー</title>
+  <title>QRコードリーダー（カメラ選択あり）</title>
   <style>
     body {
       font-family: sans-serif;
@@ -11,15 +11,19 @@
       padding: 0;
       background: #f0f0f0;
     }
+    #controls {
+      padding: 1em;
+      background: #fff;
+      text-align: center;
+    }
     #video {
       width: 100%;
-      height: auto;
       background: black;
     }
     #log {
       padding: 1em;
       background: white;
-      height: 50vh;
+      height: 40vh;
       overflow-y: scroll;
       font-size: 1.2em;
     }
@@ -33,29 +37,38 @@
   </style>
 </head>
 <body>
+
+  <div id="controls">
+    <label for="camera-select">カメラ選択：</label>
+    <select id="camera-select"></select>
+  </div>
+
   <video id="video" autoplay muted playsinline></video>
   <div id="log"></div>
 
   <script type="module">
     import QrScanner from './js/qr-scanner.min.js';
-
-    // ✅ GitHub PagesのURLに合わせて絶対パスで指定
     QrScanner.WORKER_PATH = 'https://kouseicalender.github.io/qr-reader/js/qr-scanner-worker.min.js';
 
     const video = document.getElementById('video');
     const log = document.getElementById('log');
+    const cameraSelect = document.getElementById('camera-select');
+    let scanner;
 
-    const scanner = new QrScanner(video, result => {
-      const time = new Date().toLocaleTimeString();
-      const entry = document.createElement('div');
-      entry.className = 'entry';
-      entry.innerHTML = `<div><strong>${result}</strong></div><div class="timestamp">${time}</div>`;
-      log.prepend(entry);
+    const scannedSet = new Set();
+
+    // カメラ一覧を取得してセレクトボックスに追加
+    QrScanner.listCameras(true).then(cameras => {
+      cameras.forEach((camera, index) => {
+        const option = document.createElement('option');
+        option.value = camera.id;
+        option.text = camera.label || `カメラ ${index + 1}`;
+        cameraSelect.appendChild(option);
+      });
+
+      if (cameras.length > 0) {
+        startScanner(cameras[0].id); // 初期カメラ起動
+      }
     });
 
-    scanner.start().catch(err => {
-      log.innerHTML = `<div style="color:red;">カメラ起動エラー: ${err.message}</div>`;
-    });
-  </script>
-</body>
-</html>
+    // カメラ切り替え処理（OFFにせ
