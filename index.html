@@ -33,11 +33,19 @@
     let scanner;
 
     function addLog(text) {
-      const time = new Date().toLocaleTimeString();
-      const entry = document.createElement('div');
-      entry.className = 'entry';
-      entry.innerHTML = `<div><strong>${text}</strong></div><div class="timestamp">${time}</div>`;
-      log.prepend(entry);
+  const time = new Date().toLocaleTimeString();
+
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+
+  // URLっぽいならリンクにする
+  const isUrl = /^https?:\/\/.+/i.test(text);
+  const content = isUrl
+    ? `<a href="${text}" target="_blank">${text}</a>`
+    : `<span>${text}</span>`;
+
+  entry.innerHTML = `<div>${content}</div><div class="timestamp">${time}</div>`;
+  log.prepend(entry);
     }
 
     QrScanner.listCameras().then(cameras => {
