@@ -3,14 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QRコードリーダー（カメラ選択＆重複防止）</title>
+  <title>QRコードリーダー（最新1件のみ表示）</title>
   <style>
     body { font-family: sans-serif; margin: 0; background: #f0f0f0; }
     #controls { padding: 1em; background: #fff; text-align: center; }
     #video { width: 100%; background: black; }
-    #log { padding: 1em; background: white; height: 40vh; overflow-y: scroll; font-size: 1.2em; }
-    .entry { margin-bottom: 0.5em; }
-    .timestamp { color: #888; font-size: 0.9em; }
+    #result {
+      padding: 1em;
+      background: white;
+      font-size: 1.2em;
+      text-align: center;
+    }
+    #result a {
+      color: blue;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -21,55 +28,40 @@
   </div>
 
   <video id="video" autoplay muted playsinline></video>
-  <div id="log"></div>
+  <div id="result">QRコードをスキャンしてください</div>
 
   <script type="module">
     import QrScanner from 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner.min.js';
     QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js';
 
     const video = document.getElementById('video');
-    const log = document.getElementById('log');
     const cameraSelect = document.getElementById('camera-select');
+    const resultDiv = document.getElementById('result');
     let scanner;
-    let lastScannedText = '';
-    let lastScannedTime = 0;
 
-    function addLog(text) {
-      const now = Date.now();
-      if (text === lastScannedText && now - lastScannedTime < 3000) return;
-
-      lastScannedText = text;
-      lastScannedTime = now;
-
-      const time = new Date().toLocaleTimeString();
-      const entry = document.createElement('div');
-      entry.className = 'entry';
-
+    function showResult(text) {
       const isUrl = /^https?:\/\/.+/i.test(text);
-      const content = isUrl
+      resultDiv.innerHTML = isUrl
         ? `<a href="${text}" target="_blank">${text}</a>`
         : `<span>${text}</span>`;
-
-      entry.innerHTML = `<div>${content}</div><div class="timestamp">${time}</div>`;
-      log.prepend(entry);
     }
 
     function startScanner(cameraId) {
       scanner = new QrScanner(video, result => {
-        addLog(result);
+        showResult(result);
       }, {
         deviceId: cameraId,
         highlightScanRegion: true,
         highlightCodeOutline: true
       });
       return scanner.start().catch(err => {
-        addLog(`カメラ起動エラー: ${err.message}`);
+        resultDiv.innerHTML = `<span style="color:red;">カメラ起動エラー: ${err.message}</span>`;
       });
     }
 
     QrScanner.listCameras().then(cameras => {
       if (cameras.length === 0) {
-        addLog('利用可能なカメラが見つかりません。');
+        resultDiv.innerHTML = '利用可能なカメラが見つかりません';
         return;
       }
 
