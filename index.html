@@ -39,25 +39,23 @@
   <script type="module">
     import QrScanner from './js/qr-scanner.min.js';
 
-    // 👇これがないと動かない！
+    // ✅ GitHub PagesのURLに合わせて絶対パスで指定
     QrScanner.WORKER_PATH = 'https://kouseicalender.github.io/qr-reader/js/qr-scanner-worker.min.js';
 
     const video = document.getElementById('video');
     const log = document.getElementById('log');
-    const scannedSet = new Set();
 
     const scanner = new QrScanner(video, result => {
-      if (!scannedSet.has(result)) {
-        scannedSet.add(result);
-        const time = new Date().toLocaleTimeString();
-        const entry = document.createElement('div');
-        entry.className = 'entry';
-        entry.innerHTML = `<div><strong>${result}</strong></div><div class="timestamp">${time}</div>`;
-        log.prepend(entry);
-      }
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'entry';
+      entry.innerHTML = `<div><strong>${result}</strong></div><div class="timestamp">${time}</div>`;
+      log.prepend(entry);
     });
 
-    scanner.start();
+    scanner.start().catch(err => {
+      log.innerHTML = `<div style="color:red;">カメラ起動エラー: ${err.message}</div>`;
+    });
   </script>
 </body>
 </html>
