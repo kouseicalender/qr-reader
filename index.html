@@ -48,7 +48,7 @@
 
     function startScanner(cameraId) {
       scanner = new QrScanner(video, result => {
-        showResult(result);
+        showResult(result.data);  // ← 修正ポイントここ！
       }, {
         deviceId: cameraId,
         highlightScanRegion: true,
