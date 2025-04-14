@@ -1,74 +1,62 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QRコードリーダー（カメラ選択あり）</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f0f0f0;
-    }
-    #controls {
-      padding: 1em;
-      background: #fff;
-      text-align: center;
-    }
-    #video {
-      width: 100%;
-      background: black;
-    }
-    #log {
-      padding: 1em;
-      background: white;
-      height: 40vh;
-      overflow-y: scroll;
-      font-size: 1.2em;
-    }
-    .entry {
-      margin-bottom: 0.5em;
-    }
-    .timestamp {
-      color: #888;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<body>
+<script type="module">
+  import QrScanner from './js/qr-scanner.min.js';
+  QrScanner.WORKER_PATH = 'https://kouseicalender.github.io/qr-reader/js/qr-scanner-worker.min.js';
 
-  <div id="controls">
-    <label for="camera-select">カメラ選択：</label>
-    <select id="camera-select"></select>
-  </div>
+  const video = document.getElementById('video');
+  const log = document.getElementById('log');
+  const cameraSelect = document.getElementById('camera-select');
+  let scanner;
 
-  <video id="video" autoplay muted playsinline></video>
-  <div id="log"></div>
+  function addLog(text) {
+    const time = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.innerHTML = `<div><strong>${text}</strong></div><div class="timestamp">${time}</div>`;
+    log.prepend(entry);
+  }
 
-  <script type="module">
-    import QrScanner from './js/qr-scanner.min.js';
-    QrScanner.WORKER_PATH = 'https://kouseicalender.github.io/qr-reader/js/qr-scanner-worker.min.js';
+  // 最初に自動カメラ起動（ラベルなし）
+  QrScanner.listCameras().then(cameras => {
+    if (cameras.length === 0) {
+      addLog('利用可能なカメラが見つかりません。');
+      return;
+    }
 
-    const video = document.getElementById('video');
-    const log = document.getElementById('log');
-    const cameraSelect = document.getElementById('camera-select');
-    let scanner;
-
-    const scannedSet = new Set();
-
-    // カメラ一覧を取得してセレクトボックスに追加
-    QrScanner.listCameras(true).then(cameras => {
-      cameras.forEach((camera, index) => {
-        const option = document.createElement('option');
-        option.value = camera.id;
-        option.text = camera.label || `カメラ ${index + 1}`;
-        cameraSelect.appendChild(option);
+    // 最初のカメラでスキャン開始
+    startScanner(cameras[0].id).then(() => {
+      // ✅ 起動後にラベル付きのカメラ一覧を再取得
+      QrScanner.listCameras(true).then(camerasWithLabels => {
+        cameraSelect.innerHTML = ''; // 一旦リセット
+        camerasWithLabels.forEach((camera, index) => {
+          const option = document.createElement('option');
+          option.value = camera.id;
+          option.text = camera.label || `カメラ ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+        cameraSelect.value = cameras[0].id;
       });
-
-      if (cameras.length > 0) {
-        startScanner(cameras[0].id); // 初期カメラ起動
-      }
     });
+  });
 
-    // カメラ切り替え処理（OFFにせ
+  // カメラ切り替え時
+  cameraSelect.addEventListener('change', () => {
+    if (scanner) {
+      scanner.stop().then(() => {
+        startScanner(cameraSelect.value);
+      });
+    }
+  });
+
+  function startScanner(cameraId) {
+    scanner = new QrScanner(video, result => {
+      addLog(result);
+    }, {
+      deviceId: cameraId,
+      highlightScanRegion: true,
+      highlightCodeOutline: true
+    });
+    return scanner.start().catch(err => {
+      addLog(`カメラ起動エラー: ${err.message}`);
+    });
+  }
+</script>
